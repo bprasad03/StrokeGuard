@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stroke Risk Predictor</title>
+    <!-- Using Tailwind CSS CDN for utility-first styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles for Modern UI -->
+    <style>
+        /* 1. Global Font and Base Styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { 
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; 
+            /* Enhanced Background: Darker base for contrast, subtle gradient */
+            background-color: #f0f4f8; 
+        }
+
+        /* 2. Custom Tailwind Configuration */
+        /* Define a clean, professional color palette */
+        :root {
+            --color-primary: #3b82f6; /* Blue-500 (More vibrant) */
+            --color-accent: #10b981; /* Emerald-500 */
+            --color-text-base: #1f2937; /* Gray-800 */
+            --color-text-light: #6b7280; /* Gray-500 */
+            --color-card-bg: #ffffff;
+        }
+
+        /* 3. Card Effect (Elevated and Smoother) */
+        .card-elevated { 
+            background-color: var(--color-card-bg);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            /* Stronger, softer shadow */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .card-elevated:hover {
+            transform: translateY(-4px); /* More noticeable lift */
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), 0 12px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 4. Input/Select Focus Styling */
+        .form-input-field {
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-input-field:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); /* Wider, more prominent focus ring */
+        }
+
+        /* 5. Button Styling (More pronounced effect) */
+        .btn-primary {
+            background-color: var(--color-primary);
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb; /* Blue-600 */
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(59, 130, 246, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        /* 6. Decorative Background (More abstract/modern) */
+        .decor-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10;
+            opacity: 0.4;
+            /* Abstract shape design */
+            background: radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.1), transparent 30%),
+                        radial-gradient(circle at 95% 95%, rgba(16, 185, 129, 0.1), transparent 30%);
+        }
+
+        /* 7. Prediction Result Styling */
+        .risk-low { background-color: #d1fae5; color: #065f46; } /* Green-100/700 */
+        .risk-medium { background-color: #fef3c7; color: #92400e; } /* Yellow-100/800 */
+        .risk-high { background-color: #fee2e2; color: #991b1b; } /* Red-100/800 */
+        
+        /* Jinja-based dynamic class application for outcome - Removed from <style> tag to fix error */
+
+    </style>
+    <script>
+        // Customizing Tailwind to use the new color variables
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': 'var(--color-primary)',
+                        'accent': 'var(--color-accent)',
+                        'text-base': 'var(--color-text-base)',
+                        'text-light': 'var(--color-text-light)',
+                        'success': '#10b981', /* Emerald-500 */
+                        'danger': '#ef4444', /* Red-500 */
+                    },
+                    borderRadius: {
+                        'xl': '1rem', /* 16px */
+                        '2xl': '1.5rem', /* 24px */
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen py-12 relative">
+    <!-- Decorative Background -->
+    <div class="decor-bg" aria-hidden></div>
+    
+    <!-- Max-width increased from max-w-6xl to max-w-7xl for "full view" -->
+    <div class="max-w-7xl mx-auto px-4 relative">
+        <!-- Header Section -->
+        <header class="mb-10 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 p-6 bg-white rounded-2xl shadow-lg">
+            <div class="w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-accent text-white shadow-xl">
+                <!-- Icon for Stroke Risk -->
+                <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2v4a3 3 0 006 0v-4c0-1.105-1.343-2-3-2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14v4m-4-4h8"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-text-base tracking-tight">Stroke Risk Predictor</h1>
+                <p class="text-base text-text-light mt-1">Simple, clear input — quick, explainable prediction powered by LDA model.</p>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form card -->
+            <!-- Changed class from card-glass to card-elevated for new effect -->
+            <section class="lg:col-span-2 card-elevated rounded-2xl p-6 md:p-10">
+                <h2 class="text-2xl font-bold text-text-base mb-6 border-b pb-3">Patient Information</h2>
+
+                <!-- MESSAGE DISPLAY (Error or Success) -->
+                {% if error %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-6" role="alert">
+                    <strong class="font-bold">Input Error:</strong>
+                    <span class="block sm:inline">{{ error }}</span>
+                </div>
+                {% elif success_message %}
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-xl relative mb-6" role="alert">
+                    <strong class="font-bold">Success:</strong>
+                    <span class="block sm:inline">{{ success_message }}</span>
+                </div>
+                {% endif %}
+                <!-- END MESSAGE DISPLAY (Error or Success) -->
+
+                <!-- Flask Form - ACTION AND METHOD MUST BE PRESERVED -->
+                <form action="/predict" method="post" class="space-y-8">
+                    
+                    <!-- Group 1: Age & Gender -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="age" class="block text-sm font-medium text-text-base mb-1">Age</label>
+                            <input id="age" name="age" type="number" step="0.1" required placeholder="e.g., 58.0"
+                                   class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm focus:outline-none">
+                            <p class="text-xs text-text-light mt-2">Enter age in years (adult values typically 18–90). Decimals allowed for precise records.</p>
+                        </div>
+
+                        <div>
+                            <label for="gender" class="block text-sm font-medium text-text-base mb-1">Gender</label>
+                            <select id="gender" name="gender" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="Female">Female</option>
+                                <option value="Male">Male</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Select the patient's gender; choose "Other" for non-binary or prefer-not-to-say entries.</p>
+                        </div>
+                    </div>
+
+                    <!-- Group 2: Medical History & Demographics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="hypertension" class="block text-sm font-medium text-text-base mb-1">Hypertension</label>
+                            <select id="hypertension" name="hypertension" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="0">0 (No)</option>
+                                <option value="1">1 (Yes)</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Enter 1 if the patient has diagnosed hypertension, otherwise 0.</p>
+                        </div>
+
+                        <div>
+                            <label for="heart_disease" class="block text-sm font-medium text-text-base mb-1">Heart Disease</label>
+                            <select id="heart_disease" name="heart_disease" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="0">0 (No)</option>
+                                <option value="1">1 (Yes)</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Enter 1 for a recorded heart disease diagnosis (e.g., coronary disease), otherwise 0.</p>
+                        </div>
+
+                        <div>
+                            <label for="ever_married" class="block text-sm font-medium text-text-base mb-1">Ever Married</label>
+                            <select id="ever_married" name="ever_married" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Select "Yes" if the patient has ever been married; used as a demographic feature.</p>
+                        </div>
+                    </div>
+
+                    <!-- Group 3: Health Metrics & Residence -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="avg_glucose_level" class="block text-sm font-medium text-text-base mb-1">Avg Glucose Level (mg/dL)</label>
+                            <input id="avg_glucose_level" name="avg_glucose_level" type="number" step="0.01" required placeholder="e.g., 120.5"
+                                   class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm focus:outline-none">
+                            <p class="text-xs text-text-light mt-2">Average blood glucose in mg/dL; typical non-fasting values 70–200.</p>
+                        </div>
+
+                        <div>
+                            <label for="bmi" class="block text-sm font-medium text-text-base mb-1">BMI (Optional)</label>
+                            <input id="bmi" name="bmi" type="number" step="0.1" placeholder="e.g., 25.4"
+                                   class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm focus:outline-none">
+                            <p class="text-xs text-text-light mt-2">Body Mass Index; weight (kg) / height (m)^2.</p>
+                        </div>
+
+                        <div>
+                            <label for="Residence_type" class="block text-sm font-medium text-text-base mb-1">Residence</label>
+                            <select id="Residence_type" name="Residence_type" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="Urban">Urban</option>
+                                <option value="Rural">Rural</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Urban or Rural — captures environmental/lifestyle differences relevant to risk.</p>
+                        </div>
+                    </div>
+
+                    <!-- Group 4: Work & Smoking -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="work_type" class="block text-sm font-medium text-text-base mb-1">Work Type</label>
+                            <select id="work_type" name="work_type" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="Private">Private</option>
+                                <option value="Self-employed">Self-employed</option>
+                                <option value="Govt_job">Govt_job</option>
+                                <option value="children">Children (under 18)</option>
+                                <option value="Never_worked">Never_worked</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Occupation category — choose the entry that best matches the patient's main work status.</p>
+                        </div>
+
+                        <div>
+                            <label for="smoking_status" class="block text-sm font-medium text-text-base mb-1">Smoking Status</label>
+                            <select id="smoking_status" name="smoking_status" required 
+                                    class="form-input-field mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm appearance-none bg-white focus:outline-none">
+                                <option value="never smoked">Never Smoked</option>
+                                <option value="formerly smoked">Formerly Smoked</option>
+                                <option value="smokes">Smokes</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                            <p class="text-xs text-text-light mt-2">Current/former/never smoker. If unsure, choose "Unknown".</p>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-4">
+                        <button type="submit" class="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-white font-semibold text-lg shadow-lg shadow-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12A9 9 0 113 12a9 9 0 0118 0z" />
+                            </svg>
+                            Predict Stroke Risk
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Sidebar / Info & Result -->
+            <aside class="space-y-8">
+                <!-- How to Use Card -->
+                <!-- Changed class from card-glass to card-elevated for new effect -->
+                <div class="card-elevated rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-text-base mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-accent" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                        Quick Guide
+                    </h3>
+                    <p class="text-sm text-text-light">Enter the patient's health and lifestyle details into the form to generate a stroke-risk prediction.
+The model analyzes the inputs using trained machine-learning algorithms and returns both a probability score and a risk level.
+This tool helps in early risk assessment and supports understanding of important stroke-related factors.</p>
+                </div>
+
+                <!-- Prediction Result Card -->
+                <!-- Changed class from card-glass to card-elevated for new effect -->
+                <div class="card-elevated rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-text-base mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                        </svg>
+                        Prediction Result
+                    </h3>
+
+                    <!-- Jinja Conditional - MUST BE PRESERVED -->
+                    {% if prediction %}
+                    <div class="space-y-4">
+                        
+                        <!-- Probability -->
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm font-medium text-text-base">Stroke Probability</div>
+                            <div class="font-extrabold text-xl text-primary">
+                                <!-- Jinja Variable - MUST BE PRESERVED -->
+                                {{ prediction.probability }}
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <!-- visual: width set via JS to avoid Jinja inside inline CSS -->
+                            <div class="h-3 rounded-full progress-bar" data-percent="{{ prediction.probability|replace('%','') }}" aria-hidden="true"></div>
+                        </div>
+
+                        <!-- Risk Assessment -->
+                        <div class="pt-2">
+                            <div class="text-sm text-text-light">Risk Assessment</div>
+                            <div class="mt-1 font-extrabold text-2xl py-2 px-4 rounded-xl inline-block outcome-badge 
+                                {% if prediction.outcome == 'Low Risk' %}
+                                    risk-low
+                                {% elif prediction.outcome == 'Medium Risk' %}
+                                    risk-medium
+                                {% elif prediction.outcome == 'High Risk' %}
+                                    risk-high
+                                {% else %}
+                                    bg-gray-100 text-gray-700
+                                {% endif %}">
+                                <!-- Jinja Variable - MUST BE PRESERVED -->
+                                {{ prediction.outcome }}
+                            </div>
+                        </div>
+
+                        <!-- Model Info -->
+                        <div class="text-xs text-text-light pt-2 border-t border-gray-100">
+                            Model Type: <span class="font-semibold">{{ prediction.model_type }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                        <div class="text-sm text-text-light p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p>No prediction yet. Submit the form to see the results here.</p>
+                        </div>
+                    {% endif %}
+                    <!-- End Jinja Conditional -->
+                </div>
+            </aside>
+        </main>
+    </div>
+    
+    <!-- JavaScript for Progress Bar Styling -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('.progress-bar').forEach(function(el){
+                var raw = el.getAttribute('data-percent') || '0';
+                var p = parseFloat(raw.replace('%','')) || 0;
+                p = Math.max(0, Math.min(100, p));
+                el.style.width = p + '%';
+                
+                // Dynamic color gradient based on risk level
+                if (p < 33) {
+                    // Low Risk: Accent color
+                    el.style.background = 'var(--color-accent)';
+                } else if (p < 66) {
+                    // Medium Risk: Blend of Accent and Primary
+                    el.style.background = 'linear-gradient(90deg, var(--color-accent), var(--color-primary))';
+                } else {
+                    // High Risk: Danger color
+                    el.style.background = 'linear-gradient(90deg, #f97316, #ef4444)'; /* Orange to Red for danger */
+                }
+            });
+        });
+    </script>
+</body>
+</html>
